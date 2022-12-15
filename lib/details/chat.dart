@@ -141,6 +141,95 @@ class _ChatPage extends State<ChatPage> {
               : isConnected
               ? Text('Live chat with $serverName')
               : Text('Chat log with $serverName'))),
+      bottomNavigationBar: Visibility(
+        visible: false,
+        child: Container(
+          height: MediaQuery.of(context).size.height/2,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5.0),
+            color: AppColor.primaryColorDark,
+          ),
+
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25.0),
+                        color: AppColor.primaryColor,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text("Patient Info",style: TextStyle(color: AppColor.white,fontSize: 14),),
+                      )),
+                ),
+                const SizedBox(height: 20,),
+                textFields(
+                  'name',
+                  modal.controller.nameC,
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                textFields(
+                  'age',
+                  modal.controller.ageC,
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                Container(
+
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5.0),
+                    color: AppColor.white,
+                  ),
+                  child: Row(
+                    children: [
+                      addRadioButton(0, 'Male'),
+                      addRadioButton(1, 'Female'),
+                    ],
+                  ),
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                textFields(
+                  "Hotspot name",
+                  modal.controller.hotSpotNameC,
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                textFields(
+                  'Password',
+                  modal.controller.passwordC,
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                // textFields(  modal.controller.getpatientDetails.socketUrl.toString(),
+                //     modal.controller.linkC, enabled: false ),
+                MyButton2(title: "Add",onPress: () async {
+                  print("AnimehsDevicekey$DeviceKey");
+                  await modal.submitDetails(context, selectGender, deviceName, DeviceKey);
+                  Future.delayed(const Duration(seconds: 1), () {
+                    sendDataTOServer();
+                    setState(() {
+                      // Here you can write your code for open new view
+                    });
+
+                  });
+
+                },),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: GetBuilder(
         init: modal.controller,
         builder: (_) {
@@ -148,8 +237,28 @@ class _ChatPage extends State<ChatPage> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-
+                  Container(
+                    height: 70,
+                    child: Row(
+                      children: const [
+                      Expanded(child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: MyButton2(title: "Update Wifi Settings"),
+                      )),
+                      Expanded(child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: MyButton2(title: "Listen"),
+                      )),
+                      Expanded(child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: MyButton2(title: "Update Patient Info"),
+                      ))
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20,),
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(5.0),
@@ -469,81 +578,9 @@ class _ChatPage extends State<ChatPage> {
                       ],
                     ),
                   ),
+                   const SizedBox(height: 20,),
+                  //Text("Connected to ${widget.deviceAddress}"),
 
-
-
-
-
-                  Text("Connected to ${widget.deviceAddress}"),
-                  Container(
-                    color: AppColor.primaryColorDark,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          SizedBox(height: 20,),
-                          textFields(
-                            'name',
-                            modal.controller.nameC,
-                          ),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          textFields(
-                            'age',
-                            modal.controller.ageC,
-                          ),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          Container(
-
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(5.0),
-                              color: AppColor.white,
-                            ),
-                            child: Row(
-                              children: [
-                                addRadioButton(0, 'Male'),
-                                addRadioButton(1, 'Female'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          textFields(
-                            "Hotspot name",
-                            modal.controller.hotSpotNameC,
-                          ),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          textFields(
-                            'Password',
-                            modal.controller.passwordC,
-                          ),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          // textFields(  modal.controller.getpatientDetails.socketUrl.toString(),
-                          //     modal.controller.linkC, enabled: false ),
-                          MyButton2(title: "Add",onPress: () async {
-                            print("AnimehsDevicekey$DeviceKey");
-                            await modal.submitDetails(context, selectGender, deviceName, DeviceKey);
-                            Future.delayed(const Duration(seconds: 1), () {
-                              sendDataTOServer();
-                              setState(() {
-                                // Here you can write your code for open new view
-                              });
-
-                            });
-
-                          },),
-                        ],
-                      ),
-                    ),
-                  ),
 
                 //   MyButton2(title: "Send Data to server" , onPress: (){
                 //   sendDataTOServer();

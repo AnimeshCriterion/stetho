@@ -16,7 +16,7 @@ class PatientDetailsDataModel {
         this.gender,
         this.sthethoid});
 
-  PatientDetailsDataModel.fromJson(Map<String, dynamic> json) {
+  PatientDetailsDataModel.fromJson(Map json) {
     listenUrl = json['listenUrl'];
     socketUrl = json['socketUrl'];
     port = json['port'];

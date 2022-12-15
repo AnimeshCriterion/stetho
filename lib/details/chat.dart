@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:get/get.dart';
 import 'package:stetho/AppManager/alert_dialogue.dart';
+import 'package:stetho/AppManager/app_color.dart';
 import 'package:stetho/details/patient_details_datamodel.dart';
 import 'package:stetho/details/patient_modal.dart';
 
@@ -15,6 +16,7 @@ import '../AppManager/app_util.dart';
 import '../AppManager/web_view.dart';
 import '../AppManager/widgets/my_button2.dart';
 import '../AppManager/widgets/my_text_field.dart';
+import '../AppManager/widgets/my_text_field_2.dart';
 
 class ChatPage extends StatefulWidget {
    String deviceAddress,deviceName;
@@ -43,6 +45,9 @@ class _ChatPage extends State<ChatPage> {
   final ScrollController listScrollController = ScrollController();
 
   bool isConnecting = true;
+  TextEditingController time=TextEditingController();
+  TextEditingController pid=TextEditingController();
+  String recicvedData="";
   bool get isConnected => (connection?.isConnected ?? false);
 
   String DeviceKey='';
@@ -56,6 +61,7 @@ class _ChatPage extends State<ChatPage> {
   List gender = ["Male", "Female"];
   String selectGender = '';
   String deviceName = '';
+  bool isOpen=false;
 
   @override
   void initState() {
@@ -63,22 +69,13 @@ class _ChatPage extends State<ChatPage> {
 
     BluetoothConnection.toAddress(widget.deviceAddress).then((_connection) {
       print('Connected to the device${widget.deviceAddress}');
-
       connection = _connection;
       setState(() {
         isConnecting = false;
         isDisconnecting = false;
       });
       _sendMessage("knkey");
-
       connection!.input!.listen(_onDataReceived).onDone(() {
-
-        // Example: Detect which side closed the connection
-        // There should be `isDisconnecting` flag to show are we are (locally)
-        // in middle of disconnecting process, should be set before calling
-        // `dispose`, `finish` or `close`, which all causes to disconnect.
-        // If we except the disconnection, `onDone` should be fired as result.
-        // If we didn't except this (no flag set), it means closing by remote.
         if (isDisconnecting) {
           print('Disconnecting locally!');
         } else {
@@ -91,8 +88,9 @@ class _ChatPage extends State<ChatPage> {
         }
       });
     }).catchError((error) {
-      print('Cannot connect, exception occured');
-      alertToast(context, 'Cannot connect, exception occured please retry');
+      print('Cannot connect, Please try again');
+      alertToast(context, 'Cannot connect, Please try again');
+      Get.back();
 
     });
   }
@@ -111,10 +109,6 @@ class _ChatPage extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-print("Animesh"+widget.deviceAddress.toString());
-print("Animesh"+widget.deviceName.toString());
-print("Animesh"+DeviceKey.toString());
-
     final List<Row> list = messages.map((_message) {
       return Row(
         children: <Widget>[
@@ -139,7 +133,7 @@ print("Animesh"+DeviceKey.toString());
       );
     }).toList();
     print(list.toString());
-    final serverName = widget.deviceName ?? "Unknown";
+    final serverName = widget.deviceName;
     return Scaffold(
       appBar: AppBar(
           title: (isConnecting
@@ -156,51 +150,401 @@ print("Animesh"+DeviceKey.toString());
               child: Column(
                 children: [
 
-                  Text("Connected to "+widget.deviceAddress.toString()),
-                  SizedBox(height: 20,),
-                  textFields(
-                    'name',
-                    modal.controller.nameC,
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5.0),
+                      color: AppColor.primaryColor,
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(25.0),
+                                color: AppColor.primaryColorDark,
+                              ),
+                              child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text("StethoScope Control Remote",style: TextStyle(color: AppColor.white,fontSize: 14),),
+                          )),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  child: MyButton2(title: "Mode Change",elevation:5,onPress: (){
+                                    BluetoothConnection.toAddress(
+                                        "9C:9C:1F:C2:AC:26")
+                                        .then((_connection) {
+                                      print(
+                                          'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                      connection = _connection;
+                                      setState(() {
+                                        isConnecting = false;
+                                        isDisconnecting = false;
+                                      });
+                                      connection!.output.add(
+                                          Uint8List.fromList(utf8.encode("m@")));
+
+                                      connection!.input!
+                                          .listen(_onDataReceived)
+                                          .onDone(() {
+                                        // Example: Detect which side closed the connection
+                                        // There should be `isDisconnecting` flag to show are we are (locally)
+                                        // in middle of disconnecting process, should be set before calling
+                                        // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                        // If we except the disconnection, `onDone` should be fired as result.
+                                        // If we didn't except this (no flag set), it means closing by remote.
+                                        if (isDisconnecting) {
+                                          print('Disconnecting locally!');
+                                        } else {
+                                          print('Disconnected remotely!');
+                                        }
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      });
+                                    }).catchError((error) {
+                                      print('Something went wrong');
+                                      alertToast(context,
+                                          'Cannot connect, exception occured please retry');
+                                    });
+
+                                  },)),
+                              Expanded(
+                                  child: MyButton2(title: "Mode Enquiry",elevation:5,onPress: (){
+                                    BluetoothConnection.toAddress(
+                                        "9C:9C:1F:C2:AC:26")
+                                        .then((_connection) {
+                                      print(
+                                          'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                      connection = _connection;
+                                      setState(() {
+                                        isConnecting = false;
+                                        isDisconnecting = false;
+                                      });
+                                      connection!.output.add(
+                                          Uint8List.fromList(utf8.encode("m?")));
+
+                                      connection!.input!
+                                          .listen(_onDataReceived)
+                                          .onDone(() {
+                                        // Example: Detect which side closed the connection
+                                        // There should be `isDisconnecting` flag to show are we are (locally)
+                                        // in middle of disconnecting process, should be set before calling
+                                        // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                        // If we except the disconnection, `onDone` should be fired as result.
+                                        // If we didn't except this (no flag set), it means closing by remote.
+                                        if (isDisconnecting) {
+                                          print('Disconnecting locally!');
+                                        } else {
+                                          print('Disconnected remotely!');
+                                        }
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      });
+                                    }).catchError((error) {
+                                      print('Cannot connect, exception occured');
+                                      alertToast(context,
+                                          'Cannot connect, exception occured please retry');
+                                    });
+
+                                  },)),
+                              Expanded(
+                                  child: MyButton2(title: "Battery Status",elevation:5,onPress: (){
+                                    BluetoothConnection.toAddress(
+                                        "9C:9C:1F:C2:AC:26")
+                                        .then((_connection) {
+                                      print(
+                                          'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                      connection = _connection;
+                                      setState(() {
+                                        isConnecting = false;
+                                        isDisconnecting = false;
+                                      });
+                                      connection!.output.add(
+                                          Uint8List.fromList(utf8.encode("b")));
+
+                                      connection!.input!
+                                          .listen(_onDataReceived)
+                                          .onDone(() {
+                                        // Example: Detect which side closed the connection
+                                        // There should be `isDisconnecting` flag to show are we are (locally)
+                                        // in middle of disconnecting process, should be set before calling
+                                        // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                        // If we except the disconnection, `onDone` should be fired as result.
+                                        // If we didn't except this (no flag set), it means closing by remote.
+                                        if (isDisconnecting) {
+                                          print('Disconnecting locally!');
+                                        } else {
+                                          print('Disconnected remotely!');
+                                        }
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      });
+                                    }).catchError((error) {
+                                      print('Cannot connect, exception occured');
+                                      alertToast(context,
+                                          'Cannot connect, exception occured please retry');
+                                    });
+
+                                  },)),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  child: MyButton2(title: "Recording",elevation:5,onPress: (){
+                                    setState(() {
+
+                                      if(isOpen){
+                                        isOpen=false;
+                                      }else{
+                                        isOpen=true;
+                                      }
+                                    });
+
+
+
+                                  },)),
+                              Expanded(
+                                  child: MyButton2(title: "File transfer",elevation:5,onPress: (){
+                                    BluetoothConnection.toAddress(
+                                        "9C:9C:1F:C2:AC:26")
+                                        .then((_connection) {
+                                      print(
+                                          'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                      connection = _connection;
+                                      setState(() {
+                                        isConnecting = false;
+                                        isDisconnecting = false;
+                                      });
+                                      connection!.output.add(
+                                          Uint8List.fromList(utf8.encode("fheart01(filename=heart01)")));
+
+                                      connection!.input!
+                                          .listen(_onDataReceived)
+                                          .onDone(() {
+                                        // Example: Detect which side closed the connection
+                                        // There should be `isDisconnecting` flag to show are we are (locally)
+                                        // in middle of disconnecting process, should be set before calling
+                                        // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                        // If we except the disconnection, `onDone` should be fired as result.
+                                        // If we didn't except this (no flag set), it means closing by remote.
+                                        if (isDisconnecting) {
+                                          print('Disconnecting locally!');
+                                        } else {
+                                          print('Disconnected remotely!');
+                                        }
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      });
+                                    }).catchError((error) {
+                                      print('Cannot connect, exception occured');
+                                      alertToast(context,
+                                          'Cannot connect, exception occured please retry');
+                                    });
+
+                                  },)),
+                              Expanded(
+                                  child: MyButton2(title: "l",elevation:5,onPress: (){
+                                    BluetoothConnection.toAddress(
+                                        "9C:9C:1F:C2:AC:26")
+                                        .then((_connection) {
+                                      print(
+                                          'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                      connection = _connection;
+                                      setState(() {
+                                        isConnecting = false;
+                                        isDisconnecting = false;
+                                      });
+                                      connection!.output.add(
+                                          Uint8List.fromList(utf8.encode("m@")));
+
+                                      connection!.input!
+                                          .listen(_onDataReceived)
+                                          .onDone(() {
+                                        // Example: Detect which side closed the connection
+                                        // There should be `isDisconnecting` flag to show are we are (locally)
+                                        // in middle of disconnecting process, should be set before calling
+                                        // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                        // If we except the disconnection, `onDone` should be fired as result.
+                                        // If we didn't except this (no flag set), it means closing by remote.
+                                        if (isDisconnecting) {
+                                          print('Disconnecting locally!');
+                                        } else {
+                                          print('Disconnected remotely!');
+                                        }
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      });
+                                    }).catchError((error) {
+                                      print('Cannot connect, exception occured');
+                                      alertToast(context,
+                                          'Cannot connect, exception occured please retry');
+                                    });
+
+                                  },)),
+                            ],
+                          ),
+                        ),
+                        Visibility(
+                          visible: isOpen,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                    child: MyTextField2(
+                                      controller: time,
+                                      hintText: "Enter time in sec",
+                                    )),
+                                Expanded(
+                                    child:  MyTextField2(
+                                      controller: pid,
+                                      hintText: "Enter PID",
+                                    )),
+                                Expanded(
+                                    child: MyButton2(title: "Start Recording",onPress: (){
+                                      print("Time${time.value.text}");
+                                      print("PId${pid.value.text}");
+
+                                      BluetoothConnection.toAddress(
+                                          "9C:9C:1F:C2:AC:26")
+                                          .then((_connection) {
+                                        print(
+                                            'Connected to the device${"9C:9C:1F:C2:AC:26"}');
+
+                                        connection = _connection;
+                                        setState(() {
+                                          isConnecting = false;
+                                          isDisconnecting = false;
+                                        });
+                                        connection!.output.add(
+                                            Uint8List.fromList(utf8.encode("r${time.value.text}${pid.value.text}")));
+                                        connection!.input!
+                                            .listen(_onDataReceived)
+                                            .onDone(() {
+                                          // Example: Detect which side closed the connection
+                                          // There should be `isDisconnecting` flag to show are we are (locally)
+                                          // in middle of disconnecting process, should be set before calling
+                                          // `dispose`, `finish` or `close`, which all causes to disconnect.
+                                          // If we except the disconnection, `onDone` should be fired as result.
+                                          // If we didn't except this (no flag set), it means closing by remote.
+                                          if (isDisconnecting) {
+                                            print('Disconnecting locally!');
+                                          } else {
+                                            print('Disconnected remotely!');
+                                          }
+                                          if (mounted) {
+                                            setState(() {});
+                                          }
+                                        });
+                                      }).catchError((error) {
+                                        print('Cannot connect, exception occured');
+                                        alertToast(context,
+                                            'Cannot connect, exception occured please retry');
+                                      });
+
+                                    },)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Text("Status$recicvedData"),
+                      ],
+                    ),
                   ),
-                  const SizedBox(
-                    height: 15,
+
+
+
+
+
+                  Text("Connected to ${widget.deviceAddress}"),
+                  Container(
+                    color: AppColor.primaryColorDark,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          SizedBox(height: 20,),
+                          textFields(
+                            'name',
+                            modal.controller.nameC,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          textFields(
+                            'age',
+                            modal.controller.ageC,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          Container(
+
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(5.0),
+                              color: AppColor.white,
+                            ),
+                            child: Row(
+                              children: [
+                                addRadioButton(0, 'Male'),
+                                addRadioButton(1, 'Female'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          textFields(
+                            "Hotspot name",
+                            modal.controller.hotSpotNameC,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          textFields(
+                            'Password',
+                            modal.controller.passwordC,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          // textFields(  modal.controller.getpatientDetails.socketUrl.toString(),
+                          //     modal.controller.linkC, enabled: false ),
+                          MyButton2(title: "Add",onPress: () async {
+                            print("AnimehsDevicekey$DeviceKey");
+                            await modal.submitDetails(context, selectGender, deviceName, DeviceKey);
+                            Future.delayed(const Duration(seconds: 1), () {
+                              sendDataTOServer();
+                              setState(() {
+                                // Here you can write your code for open new view
+                              });
+
+                            });
+
+                          },),
+                        ],
+                      ),
+                    ),
                   ),
-                  textFields(
-                    'age',
-                    modal.controller.ageC,
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    children: [
-                      addRadioButton(0, 'Male'),
-                      addRadioButton(1, 'Female'),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  textFields(
-                    "Hotspot name",
-                    modal.controller.hotSpotNameC,
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  textFields(
-                    'Password',
-                    modal.controller.passwordC,
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  // textFields(  modal.controller.getpatientDetails.socketUrl.toString(),
-                  //     modal.controller.linkC, enabled: false ),
-                  MyButton2(title: "Add",onPress: () async {
-                   await modal.submitDetails(context, selectGender, deviceName, DeviceKey);
-                    sendDataTOServer();
-                  },),
+
                 //   MyButton2(title: "Send Data to server" , onPress: (){
                 //   sendDataTOServer();
                 // },)
@@ -243,12 +587,11 @@ print("Animesh"+DeviceKey.toString());
     String dataString = String.fromCharCodes(buffer);
     setState((){
       DeviceKey=dataString.toString();
+      modal.controller.updateDeviceKeyData=dataString.toString();
     });
 
-
-
     print("Animehs$DeviceKey");
-    modal.controller.deviceKey.text=dataString.toString();
+
 
    // modal.submitDetails(context, selectGender, deviceName, DeviceKey);
     int index = buffer.indexOf(13);
@@ -330,34 +673,7 @@ print("Animesh"+DeviceKey.toString());
     );
   }
 
-  Widget submitButton(context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8.0, right: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 60,
-              child: MyButton2(
-                  title: 'Submit',
-                  onPress: () async {
-                    await modal.submitDetails(context, selectGender, deviceName , DeviceKey);
-                    Future.delayed(Duration.zero, () async {
-                      sendDataTOServer();
-                    });
 
-
-                  }),
-            ),
-          ),
-          const SizedBox(
-            width: 10,
-          ),
-
-        ],
-      ),
-    );
-  }
 
   info() async {
     if (Platform.isAndroid) {
@@ -388,7 +704,7 @@ print("Animesh"+DeviceKey.toString());
         });
         var realData =  ascii.decode(data);
         print('realData: $realData');
-        DeviceKey = realData;
+       // DeviceKey = realData;
         print('deviceKey: $DeviceKey');
 
       }).onDone(() {
@@ -415,7 +731,7 @@ print("Animesh"+DeviceKey.toString());
         connection!.output.add(Uint8List.fromList(utf8.encode("$hName\r\n")));
         connection!.output.add(Uint8List.fromList(utf8.encode("$hPassword\r\n")));
         await connection!.output.allSent;
-        print('sent success to sthetho');
+        print('sent success to Stetho');
         setState(() {
           Future.delayed(Duration.zero, () async {
             App().navigate(

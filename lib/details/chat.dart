@@ -1,0 +1,458 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:get/get.dart';
+import 'package:stetho/AppManager/alert_dialogue.dart';
+import 'package:stetho/details/patient_details_datamodel.dart';
+import 'package:stetho/details/patient_modal.dart';
+
+import '../AppManager/app_util.dart';
+import '../AppManager/web_view.dart';
+import '../AppManager/widgets/my_button2.dart';
+import '../AppManager/widgets/my_text_field.dart';
+
+class ChatPage extends StatefulWidget {
+   String deviceAddress,deviceName;
+
+   ChatPage({  required this.deviceName, required this.deviceAddress});
+
+  @override
+  _ChatPage createState() => _ChatPage();
+}
+
+class _Message {
+  int whom;
+  String text;
+  _Message(this.whom, this.text);
+}
+
+class _ChatPage extends State<ChatPage> {
+  static const clientID = 0;
+  BluetoothConnection? connection;
+
+  List<_Message> messages = List<_Message>.empty(growable: true);
+  String _messageBuffer = '';
+
+  final TextEditingController textEditingController =
+  TextEditingController();
+  final ScrollController listScrollController = ScrollController();
+
+  bool isConnecting = true;
+  bool get isConnected => (connection?.isConnected ?? false);
+
+  String DeviceKey='';
+
+  bool isDisconnecting = false;
+
+
+  DeviceInfoPlugin infoPlugin = DeviceInfoPlugin();
+
+  PatientModal modal = PatientModal();
+  List gender = ["Male", "Female"];
+  String selectGender = '';
+  String deviceName = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    BluetoothConnection.toAddress(widget.deviceAddress).then((_connection) {
+      print('Connected to the device${widget.deviceAddress}');
+
+      connection = _connection;
+      setState(() {
+        isConnecting = false;
+        isDisconnecting = false;
+      });
+      _sendMessage("knkey");
+
+      connection!.input!.listen(_onDataReceived).onDone(() {
+
+        // Example: Detect which side closed the connection
+        // There should be `isDisconnecting` flag to show are we are (locally)
+        // in middle of disconnecting process, should be set before calling
+        // `dispose`, `finish` or `close`, which all causes to disconnect.
+        // If we except the disconnection, `onDone` should be fired as result.
+        // If we didn't except this (no flag set), it means closing by remote.
+        if (isDisconnecting) {
+          print('Disconnecting locally!');
+        } else {
+          print('Disconnected remotely!');
+        }
+        if (mounted) {
+          setState(() {
+
+          });
+        }
+      });
+    }).catchError((error) {
+      print('Cannot connect, exception occured');
+      alertToast(context, 'Cannot connect, exception occured please retry');
+
+    });
+  }
+
+  @override
+  void dispose() {
+    // Avoid memory leak (`setState` after dispose) and disconnect
+    if (isConnected) {
+      isDisconnecting = true;
+      connection?.dispose();
+      connection = null;
+    }
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+print("Animesh"+widget.deviceAddress.toString());
+print("Animesh"+widget.deviceName.toString());
+print("Animesh"+DeviceKey.toString());
+
+    final List<Row> list = messages.map((_message) {
+      return Row(
+        children: <Widget>[
+          Container(
+            child: Text(
+                    (text) {
+                  return text == '/shrug' ? '¯\\_(ツ)_/¯' : text;
+                }(_message.text.trim()),
+                style: const TextStyle(color: Colors.white)),
+            padding: const EdgeInsets.all(12.0),
+            margin: const EdgeInsets.only(bottom: 8.0, left: 8.0, right: 8.0),
+            width: 222.0,
+            decoration: BoxDecoration(
+                color:
+                _message.whom == clientID ? Colors.blueAccent : Colors.grey,
+                borderRadius: BorderRadius.circular(7.0)),
+          ),
+        ],
+        mainAxisAlignment: _message.whom == clientID
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+      );
+    }).toList();
+    print(list.toString());
+    final serverName = widget.deviceName ?? "Unknown";
+    return Scaffold(
+      appBar: AppBar(
+          title: (isConnecting
+              ? Text('Connecting chat to $serverName...')
+              : isConnected
+              ? Text('Live chat with $serverName')
+              : Text('Chat log with $serverName'))),
+      body: GetBuilder(
+        init: modal.controller,
+        builder: (_) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+
+                  Text("Connected to "+widget.deviceAddress.toString()),
+                  SizedBox(height: 20,),
+                  textFields(
+                    'name',
+                    modal.controller.nameC,
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  textFields(
+                    'age',
+                    modal.controller.ageC,
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  Row(
+                    children: [
+                      addRadioButton(0, 'Male'),
+                      addRadioButton(1, 'Female'),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  textFields(
+                    "Hotspot name",
+                    modal.controller.hotSpotNameC,
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  textFields(
+                    'Password',
+                    modal.controller.passwordC,
+                  ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  // textFields(  modal.controller.getpatientDetails.socketUrl.toString(),
+                  //     modal.controller.linkC, enabled: false ),
+                  MyButton2(title: "Add",onPress: () async {
+                   await modal.submitDetails(context, selectGender, deviceName, DeviceKey);
+                    sendDataTOServer();
+                  },),
+                //   MyButton2(title: "Send Data to server" , onPress: (){
+                //   sendDataTOServer();
+                // },)
+                ],
+              ),
+            ),
+
+          );
+        }
+      ),
+    );
+  }
+
+  void _onDataReceived(Uint8List data) {
+    // Allocate buffer for parsed data
+    int backspacesCounter = 0;
+    data.forEach((byte) {
+      if (byte == 8 || byte == 127) {
+        backspacesCounter++;
+      }
+    });
+    Uint8List buffer = Uint8List(data.length - backspacesCounter);
+    int bufferIndex = buffer.length;
+
+    // Apply backspace control character
+    backspacesCounter = 0;
+    for (int i = data.length - 1; i >= 0; i--) {
+      if (data[i] == 8 || data[i] == 127) {
+        backspacesCounter++;
+      } else {
+        if (backspacesCounter > 0) {
+          backspacesCounter--;
+        } else {
+          buffer[--bufferIndex] = data[i];
+        }
+      }
+    }
+
+    // Create message if there is new line character
+    String dataString = String.fromCharCodes(buffer);
+    setState((){
+      DeviceKey=dataString.toString();
+    });
+
+
+
+    print("Animehs$DeviceKey");
+    modal.controller.deviceKey.text=dataString.toString();
+
+   // modal.submitDetails(context, selectGender, deviceName, DeviceKey);
+    int index = buffer.indexOf(13);
+    if (~index != 0) {
+      setState(() {
+        messages.add(
+          _Message(
+            1,
+            backspacesCounter > 0
+                ? _messageBuffer.substring(
+                0, _messageBuffer.length - backspacesCounter)
+                : _messageBuffer + dataString.substring(0, index),
+          ),
+        );
+        _messageBuffer = dataString.substring(index);
+        print("Animesh1$_messageBuffer");
+      });
+    } else {
+      _messageBuffer = (backspacesCounter > 0
+          ? _messageBuffer.substring(
+          0, _messageBuffer.length - backspacesCounter)
+          : _messageBuffer + dataString);
+    }
+  }
+
+  void _sendMessage(String text) async {
+    text = text.trim();
+    textEditingController.clear();
+
+    if (text.isNotEmpty) {
+      try {
+        connection!.output.add(Uint8List.fromList(utf8.encode("$text\r\n")));
+        await connection!.output.allSent;
+
+        setState(() {
+          messages.add(_Message(clientID, text));
+        });
+
+
+      } catch (e) {
+        // Ignore error, but notify state
+        setState(() {});
+      }
+    }
+  }
+
+
+
+  Row addRadioButton(int btnValue, String title) {
+    return Row(
+      children: [
+        Radio(
+          activeColor: Colors.green,
+          value: gender[btnValue],
+          groupValue: selectGender,
+          onChanged: (value) {
+            setState(() {
+              print(value);
+              selectGender = value;
+            });
+          },
+        ),
+        Text(title)
+      ],
+    );
+  }
+
+  /// textFields
+  MyTextField textFields(
+      String hintText, TextEditingController textEditingController,
+      {bool? enabled = true , ValueChanged ?onChanged}) {
+    return MyTextField(
+      hintText: hintText,
+      controller: textEditingController,
+      enabled: enabled,
+      onChanged: onChanged==null? null:(val){
+        onChanged(val);
+      },
+    );
+  }
+
+  Widget submitButton(context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, right: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 60,
+              child: MyButton2(
+                  title: 'Submit',
+                  onPress: () async {
+                    await modal.submitDetails(context, selectGender, deviceName , DeviceKey);
+                    Future.delayed(Duration.zero, () async {
+                      sendDataTOServer();
+                    });
+
+
+                  }),
+            ),
+          ),
+          const SizedBox(
+            width: 10,
+          ),
+
+        ],
+      ),
+    );
+  }
+
+  info() async {
+    if (Platform.isAndroid) {
+      AndroidDeviceInfo androidInfo = await infoPlugin.androidInfo;
+      print('Running on : ${androidInfo.device}');
+      deviceName = androidInfo.device;
+      print('androidDevice : $deviceName');
+    } else if (Platform.isIOS) {
+      IosDeviceInfo iosDeviceInfo = await infoPlugin.iosInfo;
+      print('Running on : ${iosDeviceInfo.name}');
+      deviceName = iosDeviceInfo.name.toString();
+      print('iosDevice : $deviceName');
+    }
+  }
+
+  /// bluetooth data receiver
+  bluetoothDataReceiver() async {
+    try {
+      BluetoothConnection connection =
+      await BluetoothConnection.toAddress(widget.deviceAddress);
+      print('Connected to the device form listenToBluetooth method${widget.deviceAddress}');
+      print('cccccccccc${connection.output}');
+      /// receiving Data
+      connection.input!.listen((Uint8List data) {
+        setState(() {
+          connection.output.add(data);
+          print( 'ddddddddddddd  : $data');
+        });
+        var realData =  ascii.decode(data);
+        print('realData: $realData');
+        DeviceKey = realData;
+        print('deviceKey: $DeviceKey');
+
+      }).onDone(() {
+        print('Disconnected by remote request from listenToBluetooth');
+      });
+    } catch (exception) {
+      bluetoothDataReceiver();
+      print("exeeppp   $exception");
+    }
+  }
+
+
+  void sendDataTOServer( ) async {
+    String socketurl ="u${modal.controller.getpatientDetails.socketUrl}" ;
+    String hName ="u${modal.controller.hotSpotNameC.value.text.toString()}" ;
+    String hPassword ="u${modal.controller.passwordC.value.text.toString()}" ;
+      print("Server request$socketurl");
+
+    textEditingController.clear();
+
+    if (socketurl.isNotEmpty) {
+      try {
+        connection!.output.add(Uint8List.fromList(utf8.encode("$socketurl\r\n")));
+        connection!.output.add(Uint8List.fromList(utf8.encode("$hName\r\n")));
+        connection!.output.add(Uint8List.fromList(utf8.encode("$hPassword\r\n")));
+        await connection!.output.allSent;
+        print('sent success to sthetho');
+        setState(() {
+          Future.delayed(Duration.zero, () async {
+            App().navigate(
+                context,
+                WebViewPage(
+                  title: 'Live Data',
+                  url: modal.controller.getpatientDetails.listenUrl.toString(),
+                ));
+          });
+
+
+        });
+        connection!.input!.listen(_onDataReceived).onDone(() {
+
+          // Example: Detect which side closed the connection
+          // There should be `isDisconnecting` flag to show are we are (locally)
+          // in middle of disconnecting process, should be set before calling
+          // `dispose`, `finish` or `close`, which all causes to disconnect.
+          // If we except the disconnection, `onDone` should be fired as result.
+          // If we didn't except this (no flag set), it means closing by remote.
+          if (isDisconnecting) {
+            print('Disconnecting locally!');
+          } else {
+            print('Disconnected remotely!');
+          }
+          if (mounted) {
+            setState(() {
+
+            });
+          }
+        });
+
+      } catch (e) {
+        print(e.toString());
+        // Ignore error, but notify state
+        setState(() {});
+      }
+    }
+  }
+}

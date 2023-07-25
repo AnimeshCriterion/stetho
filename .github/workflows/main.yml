@@ -23,9 +23,9 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'stable'
-      - name: Get Branch Name
-        id: branch
-        run: echo"::set-output name=branch::${GITHUB_REF##*/}"
+#      - name: Get Branch Name
+#        id: branch
+#        run: echo"::set-output name=branch::${GITHUB_REF##*/}"
       - name: Get Today Date
         id: date
         run: echo"::set-output name=date::${date +'%Y-%m=%d'}"
